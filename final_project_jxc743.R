@@ -2,6 +2,10 @@ library(data.table)
 library(reshape2)
 library(ggplot2)
 library(bit64)
+library(dplyr)
+library(randomForest)
+library(miscTools)
+
 
 setwd("D:/junior/stat184/final_project/american-time-use-survey")
 data <- fread("atusact.csv")
@@ -11,6 +15,56 @@ idinfo <- fread("atuscps.csv")
 # column teio1ocd has the occupation codes
 # rest is found https://www.bls.gov/tus/census10ocodes.pdf and https://www.bls.gov/tus/atusintcodebk12.pdf
 jobinfo <- fread('atusresp.csv')
+
+# random forest model train and test
+randomrestmodel <- function(train, test)
+{
+  cols <- names(train)[1:7]
+  traincols = c("gereg", "gestfips", "hehousut", "prtage", "wokeupearly", "average_end_hour")
+  clf <- randomForest(tuactdur24 ~ ., data=train[,cols], ntree=20)
+  
+  return(clf)
+}
+
+
+# helper function to create new variable
+getendtime <- function(string)
+{
+  time <- substr(string, start = 1, stop = 2)
+  time <- strtoi(time, base = 0L)
+  return(time)
+}
+
+# taking in only the data we need for machine learning. We will also create some of our own data columns
+datacleaning <- function(testdata, idinfo)
+{
+  x <- testdata[which(testdata$activity == "Sleeping")]
+  #setnames(idinfo, c("name"), c("trcodep", "activity"))
+  x<-merge(x,idinfo[,c("tucaseid", "gereg", "gestfips", "hehousut", "prtage")],all.x=T)
+  x <- select(x, tucaseid, gereg, gestfips, hehousut, prtage, tustarttim, tuactdur24, tustoptime)
+  x_mean <- dcast(x, tucaseid~., mean, na.rm = T, value.var = "tuactdur24")
+  x$endhour = getendtime(x$tustoptime)
+  x_endhourmean <- dcast(x, tucaseid~., mean, na.rm = T, value.var = "endhour")
+  x <- merge(x, x_mean[,c("tucaseid", ".")], all.x = T )
+  setnames(x, c("."), c("Average_Time"))
+  x <- merge(x, x_endhourmean[,c("tucaseid", ".")], all.x = T )
+  setnames(x, c("."), c("average_end_hour"))
+  
+  
+  print("Create new boolean column (3rd one) if they woke up before 7am on average")
+  
+  x <- x[!duplicated(x$tucaseid),]
+  x$wokeupearly = x$average_end_hour < 7.1
+  x <- x[complete.cases(x), ]
+  
+  x <- select(x, gereg, gestfips, hehousut, prtage, tuactdur24, wokeupearly, average_end_hour)
+  x$gereg = factor(x$gereg)
+  x$gestfips = factor(x$gestfips)
+  x$hehousut = factor(x$hehousut)
+  x$wokeupearly = factor(x$wokeupearly)
+  
+  return (x)
+}
 
 
 #preparing data for first graph
@@ -217,9 +271,23 @@ main<-function(){
   print("-------------------------")
   print("FINAL PART")
   
+  print("Random Forest Regressor for predicting sleep based on various factors")
+  print("Data preprocessing for random forest")
+  MLData = datacleaning(testdata, idinfo)
+  print("Done preprocessing ml data, we will use 6 column variables to predict average time slept")
+  print("Split to train test samples with 30/70 split")
+  smp_size <- floor(0.70 * nrow(MLData))
+  set.seed(123)
+  train_ind <- sample(seq_len(nrow(MLData)), size = smp_size)
+  train <- MLData[train_ind, ]
+  test <- MLData[-train_ind, ]
   
-  return(air)
+  print("-------------------------")
+  print("Train random forest model.")
+  model = randomrestmodel(train, test)
+  
+  return(MLData)
 }
 
-
+main()
 
