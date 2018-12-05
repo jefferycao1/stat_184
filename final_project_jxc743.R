@@ -21,8 +21,19 @@ randomrestmodel <- function(train, test)
 {
   cols <- names(train)[1:7]
   traincols = c("gereg", "gestfips", "hehousut", "prtage", "wokeupearly", "average_end_hour")
-  clf <- randomForest(tuactdur24 ~ ., data=train[,cols], ntree=20)
+  clf <- randomForest(tuactdur24 ~ ., data=train[,..cols], ntree=20)
+  r2 <- rSquared(test$tuactdur24, test$tuactdur24 - predict(clf, test[,..cols]))
+  mse <- mean((test$tuactdur24 - predict(clf, test[,..cols]))^2)
+  print(paste("r2 is:", r2, "mse is:", mse))
   
+  print("graphing some data about the random forest")
+  c <- ggplot(aes(x=actual, y=pred),
+              data=data.frame(actual=test$tuactdur24, pred=predict(clf, test[,..cols])))
+  c <- c + geom_point() +
+    geom_abline(color="red") +
+    ggtitle(paste("RandomForest Regression analysis"))
+  
+  plot(c)
   return(clf)
 }
 
@@ -276,7 +287,7 @@ main<-function(){
   MLData = datacleaning(testdata, idinfo)
   print("Done preprocessing ml data, we will use 6 column variables to predict average time slept")
   print("Split to train test samples with 30/70 split")
-  smp_size <- floor(0.70 * nrow(MLData))
+  smp_size <- floor(0.70 * nrow(MLData[1:10000,]))
   set.seed(123)
   train_ind <- sample(seq_len(nrow(MLData)), size = smp_size)
   train <- MLData[train_ind, ]
@@ -286,8 +297,8 @@ main<-function(){
   print("Train random forest model.")
   model = randomrestmodel(train, test)
   
-  return(MLData)
+  return(list(MLData, train, test, model))
 }
 
-main()
+data <- main()
 
