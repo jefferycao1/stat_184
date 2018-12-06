@@ -7,14 +7,27 @@ library(randomForest)
 library(miscTools)
 
 
-setwd("D:/junior/stat184/final_project/american-time-use-survey")
-data <- fread("atusact.csv")
-codes <- fread('codes.csv')
-idinfo <- fread("atuscps.csv")
+#setwd("D:/junior/stat184/final_project/american-time-use-survey")
+#data <- fread("atusact.csv")
+#codes <- fread('codes.csv')
+#idinfo <- fread("atuscps.csv")
 
 # column teio1ocd has the occupation codes
 # rest is found https://www.bls.gov/tus/census10ocodes.pdf and https://www.bls.gov/tus/atusintcodebk12.pdf
-jobinfo <- fread('atusresp.csv')
+#jobinfo <- fread('atusresp.csv')
+
+# Test jeffery data on model to predict sleep hours
+testjeffery <- function(test, jeffery, model)
+{
+  levels(jeffery$gereg) <- levels(test$gereg)
+  levels(jeffery$gestfips) <- levels(test$gestfips)
+  levels(jeffery$hehousut) <- levels(test$hehousut)
+  levels(jeffery$wokeupearly) <- levels(test$wokeupearly)
+
+  jeffery_sleep <- predict(model, jeffery)
+  return(jeffery_sleep)
+}
+
 
 # random forest model train and test
 randomrestmodel <- function(train, test)
@@ -31,8 +44,10 @@ randomrestmodel <- function(train, test)
               data=data.frame(actual=test$tuactdur24, pred=predict(clf, test[,..cols])))
   c <- c + geom_point() +
     geom_abline(color="red") +
-    ggtitle(paste("RandomForest Regression analysis"))
+    ggtitle("RandomForest Regression analysis") + theme(plot.title = element_text(hjust = 0.5))
+  c <- c + labs(caption = paste("INFO: This is the graph to show our results of actual vs predicted."))
   
+  ggsave("randomforest.pdf", plot = c)
   plot(c)
   return(clf)
 }
@@ -155,6 +170,9 @@ graphtotaltime <- function(totaltime)
   c <- c + labs(caption = "INFO: The top 10 time spend on activites for all the respondents. Sleeping is the most by far")
   print("Plotting first graph...")
   plot(c)
+  ggsave("graph1.pdf", plot = c)
+  print(c)
+  
 }
 
 # graphing total time spent on activities depending on job
@@ -179,6 +197,7 @@ graphjob <- function(jobtimedata, jobstitle)
   #c + scale_x_discrete(labels = abbreviate)
   c <- c + labs(caption = paste("INFO: The top 10 time spend on activites for", jobstitle,"Numbers may look weird due to weekends."))
   print(paste("plotting second graph about", jobstitle))
+  ggsave(paste(jobstitle, ".pdf", sep = ""), plot = c)
   plot(c)
 }
 
@@ -202,15 +221,17 @@ graphindustry <- function(industrydata, industryname)
   #c + scale_x_discrete(labels = abbreviate)
   c <- c + labs(caption = paste("INFO: The top 10 time spend on activites for", industryname,"Numbers may look weird due to weekends."))
   print(paste("plotting second graph about", industryname))
+  ggsave(paste(industryname, ".pdf", sep = ""), plot = c)
   plot(c)
 }
 
 main<-function(){
   # data from kaggle https://www.kaggle.com/bls/american-time-use-survey
   setwd("D:/junior/stat184/final_project/american-time-use-survey")
-  #data <- fread("atusact.csv")
+  print("Reading data from working directory")
+  data <- fread("atusact.csv")
   codes <- fread('codes.csv')
-  #idinfo <- fread("atuscps.csv")
+  idinfo <- fread("atuscps.csv")
   # column teio1ocd has the occupation codes
   # rest is found https://www.bls.gov/tus/census10ocodes.pdf and https://www.bls.gov/tus/atusintcodebk12.pdf
   jobinfo <- fread('atusresp.csv')
@@ -296,9 +317,20 @@ main<-function(){
   print("-------------------------")
   print("Train random forest model.")
   model = randomrestmodel(train, test)
+  print("It isn't too accurate but I only used 10000 rows instead of the 100000+ due to trianing speed")
+  print("If we used more data it may become a lot better, but it also didn't perform too amazing due to ")
+  print("The random/high variance nature of the data and we didn't use too many features")
+  print("Next I will just do a fun prediction on my sleep hours in the future")
   
-  return(list(MLData, train, test, model))
+  jeffery <- data.frame("gereg" = "1", "gestfips" = "42", "hehousut" = "1", "prtage" = as.integer(22), "wokeupearly" = "FALSE", "average_end_hour" = 8.0)
+  jeffery_sleep <- testjeffery(test, jeffery, model)
+  print("Jeffery dataset is: ")
+  print(jeffery)
+  print(paste("Jeffery predicted hours of sleep is:", jeffery_sleep))
+  print("Thats not very good.")
+  
+  print("Finally all the graphs should be plotted or have been saved in the working directory")
 }
 
-data <- main()
+main()
 
