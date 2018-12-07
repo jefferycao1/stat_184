@@ -227,14 +227,14 @@ graphindustry <- function(industrydata, industryname)
 
 main<-function(){
   # data from kaggle https://www.kaggle.com/bls/american-time-use-survey
-  setwd("D:/junior/stat184/final_project/american-time-use-survey")
+  setwd(".")
   print("Reading data from working directory")
-  data <- fread("atusact.csv")
-  codes <- fread('codes.csv')
-  idinfo <- fread("atuscps.csv")
+  data <- fread("./Data/atusact.csv")
+  codes <- fread('./Data/codes.csv')
+  idinfo <- fread("./Data/atuscps.csv")
   # column teio1ocd has the occupation codes
   # rest is found https://www.bls.gov/tus/census10ocodes.pdf and https://www.bls.gov/tus/atusintcodebk12.pdf
-  jobinfo <- fread('atusresp.csv')
+  jobinfo <- fread('./Data/atusresp.csv')
   
   # creating copies
   datacopy <- data
