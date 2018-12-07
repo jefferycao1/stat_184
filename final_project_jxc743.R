@@ -326,7 +326,7 @@ main<-function(){
   jeffery_sleep <- testjeffery(test, jeffery, model)
   print("Jeffery dataset is: ")
   print(jeffery)
-  print(paste("Jeffery predicted hours of sleep is:", jeffery_sleep))
+  print(paste("Jeffery predicted minutes of sleep is:", jeffery_sleep))
   print("Thats not very good.")
   
   print("Finally all the graphs should be plotted or have been saved in the working directory")
